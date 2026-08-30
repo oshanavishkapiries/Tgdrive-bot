@@ -46,6 +46,8 @@ pm2 save
 pm2 logs tgdrive-bot
 ```
 
+See [RUNNING.md](./RUNNING.md) for the full command reference — pm2 management, updating after a `git pull`, changing config, troubleshooting, and removal.
+
 Deleting the project folder removes the venv and the SQLite database with it — nothing this project needs is installed outside `Tgdrive-bot/`.
 
 ## How Google Drive auth works

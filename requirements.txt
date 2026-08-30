@@ -1,0 +1,8 @@
+kurigram==2.2.25
+tgcrypto==1.2.5
+python-dotenv==1.2.3
+sqlalchemy==2.0.52
+requests==2.34.2
+google-api-python-client==2.199.0
+google-auth==2.57.0
+google-auth-oauthlib==1.4.1

@@ -12,6 +12,16 @@ python bot.py
 
 Stop it with `Ctrl+C`. Nothing is installed outside `Tgdrive-bot/` — the venv and `data/bot.db` both live inside this folder.
 
+### Quick smoke test
+
+Once it's running, message the bot on Telegram and check each of these in order:
+
+1. `/start` — should reply with a greeting
+2. `/help` — should reply with the command list
+3. `/auth` — should reply with a Google consent link; approve it, copy the code the Cloudflare Worker page shows, paste it back into the chat, and confirm you get "Authorized Google Drive account successfully"
+4. `/list` — should show inline buttons for your Drive root (or your `/setfolder` folder); tap into a folder, then tap a file and confirm "Make Public & Get Link" returns a working link
+5. Send a direct download link, or a Telegram file/photo — should download and upload to Drive
+
 ## 2. Running with pm2 (recommended for a live server)
 
 pm2 is the one thing in this whole setup that installs globally, because it's a process manager, not a project dependency of the bot itself.
@@ -62,6 +72,8 @@ pip install -r requirements.txt   # in case dependencies changed
 pm2 restart tgdrive-bot
 ```
 
+If `cloudflare-worker/worker.js` changed in the pull, that's not deployed automatically — open the Worker in the Cloudflare dashboard, paste in the updated file, and redeploy it there too.
+
 ## 4. Changing config
 
 Edit `.env`, then restart so the new values are picked up (env vars are only read at startup):
@@ -83,6 +95,8 @@ pm2 monit                           # live CPU/memory view
 | Bot doesn't reply on Telegram at all | Check `pm2 list` shows it `online`; check `BOT_TOKEN` is correct and not revoked |
 | `/auth` fails immediately with an error | `GDRIVE_CLIENT_ID`/`GDRIVE_CLIENT_SECRET` wrong, Drive API not enabled on the Google Cloud project, the OAuth client isn't type "Web application", or `GDRIVE_REDIRECT_URI` doesn't exactly match an Authorized redirect URI on that OAuth client |
 | Pasting the code back does nothing / says invalid | The code is single-use and expires quickly — run /auth again and paste the fresh code promptly; also check the Cloudflare Worker is still deployed and reachable |
+| `/list` says "Could not open that folder" | Credentials expired/revoked (send /auth again), the Drive API isn't enabled on the Google Cloud project, or the folder id/URL passed to `/list` is wrong |
+| "Make Public & Get Link" fails | The authenticated Google account doesn't own or have permission-editing rights on that file (e.g. it's someone else's file shared read-only with you) |
 | Uploads fail with `LimitExceeded` | Google Drive API daily/user rate limit hit on that Google account — wait 24h |
 
 ## 6. Removing the bot entirely

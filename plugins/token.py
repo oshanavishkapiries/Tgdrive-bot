@@ -2,6 +2,7 @@ import re
 import asyncio
 import requests
 from pyrogram import Client, filters
+from pyrogram.types import ReplyParameters
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from config import Config
@@ -22,7 +23,7 @@ async def _auth(client, message):
         db.set_credential(message.from_user.id, creds)
         await message.reply_text(
             "🔒 **Already authorized your Google Drive Account.**\n__Use /revoke to revoke the current account.__\n__Send me a direct link or a file to upload to Google Drive.__",
-            quote=True
+            reply_parameters=ReplyParameters(message_id=message.id)
         )
         return
 
@@ -36,7 +37,7 @@ async def _auth(client, message):
         device_resp.raise_for_status()
         device_data = device_resp.json()
     except Exception as e:
-        await message.reply_text(f"**ERROR:** ```{e}```", quote=True)
+        await message.reply_text(f"**ERROR:** ```{e}```", reply_parameters=ReplyParameters(message_id=message.id))
         return
 
     verification_url = device_data["verification_url"]
@@ -51,7 +52,7 @@ async def _auth(client, message):
         f"2. Enter this code: `{user_code}`\n"
         f"3. Approve access.\n\n"
         "__I'll detect it automatically once you're done, no need to send anything back here.__",
-        quote=True
+        reply_parameters=ReplyParameters(message_id=message.id)
     )
 
     creds = await _poll_for_token(device_code, interval, expires_in)
@@ -100,13 +101,13 @@ async def _poll_for_token(device_code, interval, expires_in):
 @Client.on_message(filters.private & filters.incoming & filters.command(["revoke"]))
 async def _revoke(client, message):
     if db.get_credential(message.from_user.id) is None:
-        await message.reply_text("🔑 **You have not authenticated me to upload to any account.**\n__Send /auth to authenticate.__", quote=True)
+        await message.reply_text("🔑 **You have not authenticated me to upload to any account.**\n__Send /auth to authenticate.__", reply_parameters=ReplyParameters(message_id=message.id))
     else:
         try:
             db.clear_credential(message.from_user.id)
-            await message.reply_text("🔓 **Authenticated account revoked successfully.**", quote=True)
+            await message.reply_text("🔓 **Authenticated account revoked successfully.**", reply_parameters=ReplyParameters(message_id=message.id))
         except Exception as e:
-            await message.reply_text(f"**ERROR:** ```{e}```", quote=True)
+            await message.reply_text(f"**ERROR:** ```{e}```", reply_parameters=ReplyParameters(message_id=message.id))
 
 
 @Client.on_message(filters.private & filters.incoming & filters.command(["setfolder"]))
@@ -115,20 +116,20 @@ async def _set_parent(client, message):
         cmd_msg = message.command[1]
         if cmd_msg.lower() == "clear":
             sql.del_id(message.from_user.id)
-            await message.reply_text("**Custom Folder ID Cleared**\n__Use /setfolder <Folder URL> to set it back.__", quote=True)
+            await message.reply_text("**Custom Folder ID Cleared**\n__Use /setfolder <Folder URL> to set it back.__", reply_parameters=ReplyParameters(message_id=message.id))
         else:
             file_id = getIdFromUrl(cmd_msg)
             if file_id == "NotFound":
-                await message.reply_text("❗ **Invalid Folder URL**\n__Copy the custom folder id correctly.__", quote=True)
+                await message.reply_text("❗ **Invalid Folder URL**\n__Copy the custom folder id correctly.__", reply_parameters=ReplyParameters(message_id=message.id))
             else:
                 sql.set_id(message.from_user.id, file_id)
-                await message.reply_text(f"**Custom Folder ID set successfully**\n__Your custom folder id is set to {file_id}. All uploads (from now) go here.\nUse__ ```/setfolder clear``` __to clear the current Folder ID.__", quote=True)
+                await message.reply_text(f"**Custom Folder ID set successfully**\n__Your custom folder id is set to {file_id}. All uploads (from now) go here.\nUse__ ```/setfolder clear``` __to clear the current Folder ID.__", reply_parameters=ReplyParameters(message_id=message.id))
     else:
         existing = sql.get_id(message.from_user.id)
         if existing:
-            await message.reply_text(f"**Your custom folder id is** ```{existing.parent_id}```.", quote=True)
+            await message.reply_text(f"**Your custom folder id is** ```{existing.parent_id}```.", reply_parameters=ReplyParameters(message_id=message.id))
         else:
-            await message.reply_text("**You did not set any Custom Folder ID**\n__Use__ ```/setfolder {folder URL}``` __to set your custom folder ID.__", quote=True)
+            await message.reply_text("**You did not set any Custom Folder ID**\n__Use__ ```/setfolder {folder URL}``` __to set your custom folder ID.__", reply_parameters=ReplyParameters(message_id=message.id))
 
 
 def getIdFromUrl(link: str):

@@ -1,6 +1,7 @@
 import os
 import json
 from mimetypes import guess_type
+from pyrogram.types import ReplyParameters
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
@@ -41,5 +42,5 @@ async def upload_file(creds, file_path, filesize, parent_id, message):
         await message.reply_text(f"**ERROR:** ```{str(err).replace('<', '').replace('>', '')}```")
         return "error"
     except Exception as e:
-        await message.reply_text(f"**ERROR:** ```{e}```", quote=True)
+        await message.reply_text(f"**ERROR:** ```{e}```", reply_parameters=ReplyParameters(message_id=message.id))
         return "error"

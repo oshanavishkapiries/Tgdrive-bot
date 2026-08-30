@@ -1,6 +1,7 @@
 import os
 import json
 from pyrogram import Client, filters
+from pyrogram.types import ReplyParameters
 from helpers import gDrive_sql as db
 from plugins.main import humanbytes
 from plugins.token import getIdFromUrl
@@ -81,7 +82,7 @@ def create_directory(service, directory_name, parent_id):
 async def _copy(client, message):
     creds = db.get_credential(message.from_user.id)
     if creds is None:
-        await message.reply_text("❗ **Not an authorized user.**\n__Authorize your Google Drive account by running the /auth command in order to use this bot.__", quote=True)
+        await message.reply_text("❗ **Not an authorized user.**\n__Authorize your Google Drive account by running the /auth command in order to use this bot.__", reply_parameters=ReplyParameters(message_id=message.id))
         return
     if len(message.command) <= 1:
         await message.reply_text("**Copy Google Drive Files or Folder**\n__Copy GDrive Files/Folder to your Google Drive Account. Use__ ```/copy {GDriveFolderURL/FileURL}``` __for copying.__")
@@ -91,7 +92,7 @@ async def _copy(client, message):
     parent_id = parent_row.parent_id if parent_row else "root"
     transferred_size = 0
 
-    sent_message = await message.reply_text("**Checking Google Drive Link...**", quote=True)
+    sent_message = await message.reply_text("**Checking Google Drive Link...**", reply_parameters=ReplyParameters(message_id=message.id))
     file_id = getIdFromUrl(message.command[1])
     if file_id == "NotFound":
         await sent_message.edit("❗ **Invalid Google Drive URL**\n__Only Google Drive links can be copied.__")

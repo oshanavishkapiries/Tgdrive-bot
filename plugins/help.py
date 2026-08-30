@@ -1,5 +1,5 @@
-from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram import Client, filters, enums
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyParameters
 from config import Messages as tr
 
 
@@ -8,9 +8,9 @@ async def _start(client, message):
     await client.send_message(
         chat_id=message.chat.id,
         text=tr.START_MSG.format(message.from_user.first_name),
-        parse_mode="markdown",
+        parse_mode=enums.ParseMode.MARKDOWN,
         disable_notification=True,
-        reply_to_message_id=message.id
+        reply_parameters=ReplyParameters(message_id=message.id)
     )
 
 
@@ -19,10 +19,10 @@ async def _help(client, message):
     await client.send_message(
         chat_id=message.chat.id,
         text=tr.HELP_MSG[1],
-        parse_mode="markdown",
+        parse_mode=enums.ParseMode.MARKDOWN,
         disable_notification=True,
         reply_markup=InlineKeyboardMarkup(help_keyboard(1)),
-        reply_to_message_id=message.id
+        reply_parameters=ReplyParameters(message_id=message.id)
     )
 
 

@@ -14,7 +14,8 @@ This is a modernized fork of an older (2019-era) project: the Telegram library, 
 - Python 3.10+
 - A Telegram API ID/Hash from https://my.telegram.org/apps
 - A Telegram bot token from https://t.me/BotFather
-- A Google Cloud project with the Drive API enabled and an OAuth 2.0 client of type **"TVs and Limited Input devices"** (required for the device-code auth flow this bot uses)
+- A Google Cloud project with the Drive API enabled and an OAuth 2.0 client of type **"Web application"** (the full `drive` scope this bot needs is not available on the device-code/TV flow, only the standard web Authorization Code flow)
+- A free Cloudflare account, to deploy the tiny redirect-catcher Worker in [cloudflare-worker/worker.js](./cloudflare-worker/worker.js) — this stands in for a real domain + SSL certificate, since Google requires an HTTPS redirect URI and Cloudflare Workers get one for free on `*.workers.dev`
 
 ## Setup (local dependencies only, nothing installed globally)
 
@@ -27,8 +28,14 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 cp .env.example .env
-# edit .env and fill in APP_ID, API_HASH, BOT_TOKEN, GDRIVE_CLIENT_ID, GDRIVE_CLIENT_SECRET
+# edit .env and fill in APP_ID, API_HASH, BOT_TOKEN, GDRIVE_CLIENT_ID, GDRIVE_CLIENT_SECRET, GDRIVE_REDIRECT_URI
 ```
+
+### Setting up Google OAuth + the Cloudflare Worker
+
+1. In the [Cloudflare dashboard](https://dash.cloudflare.com/), go to Workers & Pages → Create → Create Worker, paste in the contents of [cloudflare-worker/worker.js](./cloudflare-worker/worker.js), and deploy. Note the resulting URL, e.g. `https://tgdrive-oauth.<your-subdomain>.workers.dev`.
+2. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an OAuth 2.0 Client ID of type **Web application**, and add that exact Worker URL as an Authorized redirect URI.
+3. Put the client ID, client secret, and the Worker URL into `.env` as `GDRIVE_CLIENT_ID`, `GDRIVE_CLIENT_SECRET`, `GDRIVE_REDIRECT_URI`.
 
 ## Running
 
@@ -52,7 +59,7 @@ Deleting the project folder removes the venv and the SQLite database with it —
 
 ## How Google Drive auth works
 
-Users run `/auth` in the bot. The bot starts a Google **device authorization** flow: it replies with a short URL and a code. The user opens the URL on any device, enters the code, and approves access. The bot polls Google in the background and finishes automatically — no code needs to be pasted back into the chat.
+Users run `/auth` in the bot. The bot replies with a Google consent URL. The user opens it, approves access, and Google redirects their browser to the Cloudflare Worker, which displays a short code on the page. The user copies that code and pastes it back into the Telegram chat, and the bot exchanges it for real credentials.
 
 ## Data storage
 

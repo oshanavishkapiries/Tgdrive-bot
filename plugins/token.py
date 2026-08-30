@@ -1,18 +1,36 @@
 import re
 import asyncio
-import requests
 from pyrogram import Client, filters
 from pyrogram.types import ReplyParameters
-from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from config import Config
 from helpers import gDrive_sql as db
 from helpers import parent_id_sql as sql
 
 OAUTH_SCOPE = "https://www.googleapis.com/auth/drive"
-DEVICE_CODE_URL = "https://oauth2.googleapis.com/device/code"
-TOKEN_URL = "https://oauth2.googleapis.com/token"
 G_DRIVE_DIR_MIME_TYPE = "application/vnd.google-apps.folder"
+
+# Per-user in-progress OAuth flows, keyed by Telegram user id. A user has at
+# most one pending /auth at a time; starting a new one replaces the old.
+_pending_flows: dict[int, Flow] = {}
+
+
+def _build_flow() -> Flow:
+    client_config = {
+        "web": {
+            "client_id": Config.GDRIVE_CLIENT_ID,
+            "client_secret": Config.GDRIVE_CLIENT_SECRET,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": [Config.GDRIVE_REDIRECT_URI],
+        }
+    }
+    return Flow.from_client_config(
+        client_config,
+        scopes=[OAUTH_SCOPE],
+        redirect_uri=Config.GDRIVE_REDIRECT_URI,
+    )
 
 
 @Client.on_message(filters.private & filters.incoming & filters.command(["auth"]))
@@ -27,79 +45,47 @@ async def _auth(client, message):
         )
         return
 
-    try:
-        device_resp = await asyncio.to_thread(
-            requests.post,
-            DEVICE_CODE_URL,
-            data={"client_id": Config.GDRIVE_CLIENT_ID, "scope": OAUTH_SCOPE},
-            timeout=30
-        )
-        device_resp.raise_for_status()
-        device_data = device_resp.json()
-    except Exception as e:
-        await message.reply_text(f"**ERROR:** ```{e}```", reply_parameters=ReplyParameters(message_id=message.id))
-        return
+    flow = _build_flow()
+    auth_url, _ = flow.authorization_url(access_type="offline", prompt="consent")
+    _pending_flows[message.from_user.id] = flow
 
-    verification_url = device_data["verification_url"]
-    user_code = device_data["user_code"]
-    device_code = device_data["device_code"]
-    interval = device_data.get("interval", 5)
-    expires_in = device_data.get("expires_in", 1800)
-
-    sent = await message.reply_text(
+    await message.reply_text(
         "⛓️ **To authorize your Google Drive account:**\n"
-        f"1. Visit [{verification_url}]({verification_url})\n"
-        f"2. Enter this code: `{user_code}`\n"
-        f"3. Approve access.\n\n"
-        "__I'll detect it automatically once you're done, no need to send anything back here.__",
+        f"1. Visit [this link]({auth_url})\n"
+        "2. Approve access.\n"
+        "3. Copy the code shown on the page and send it back here.",
         reply_parameters=ReplyParameters(message_id=message.id)
     )
 
-    creds = await _poll_for_token(device_code, interval, expires_in)
-    if creds is None:
-        await sent.edit("❗ **Authorization timed out or was denied.**\n__Send /auth to try again.__")
+
+def _has_pending_flow(_, __, message):
+    if not message.from_user or message.from_user.id not in _pending_flows:
+        return False
+    return not (message.text or "").startswith("/")
+
+
+pending_auth_filter = filters.create(_has_pending_flow)
+
+
+@Client.on_message(filters.private & filters.incoming & filters.text & pending_auth_filter)
+async def _auth_code(client, message):
+    flow = _pending_flows.pop(message.from_user.id)
+    code = message.text.strip()
+
+    sent = await message.reply_text("**Checking received code...**", reply_parameters=ReplyParameters(message_id=message.id))
+    try:
+        await asyncio.to_thread(flow.fetch_token, code=code)
+    except Exception as e:
+        await sent.edit(f"❗ **Invalid code or it was already used.**\n__Send /auth to try again.__\n```{e}```")
         return
 
-    db.set_credential(message.from_user.id, creds)
+    db.set_credential(message.from_user.id, flow.credentials)
     await sent.edit("✅ **Authorized Google Drive account successfully.**\n__Send me a direct link or a file to upload.__")
-
-
-async def _poll_for_token(device_code, interval, expires_in):
-    elapsed = 0
-    while elapsed < expires_in:
-        await asyncio.sleep(interval)
-        elapsed += interval
-        resp = await asyncio.to_thread(
-            requests.post,
-            TOKEN_URL,
-            data={
-                "client_id": Config.GDRIVE_CLIENT_ID,
-                "client_secret": Config.GDRIVE_CLIENT_SECRET,
-                "device_code": device_code,
-                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-            },
-            timeout=30
-        )
-        data = resp.json()
-        if resp.status_code == 200:
-            return Credentials(
-                token=data["access_token"],
-                refresh_token=data.get("refresh_token"),
-                token_uri=TOKEN_URL,
-                client_id=Config.GDRIVE_CLIENT_ID,
-                client_secret=Config.GDRIVE_CLIENT_SECRET,
-                scopes=[OAUTH_SCOPE],
-            )
-        error = data.get("error")
-        if error == "slow_down":
-            interval += 5
-        elif error not in ("authorization_pending", None):
-            return None
-    return None
 
 
 @Client.on_message(filters.private & filters.incoming & filters.command(["revoke"]))
 async def _revoke(client, message):
+    _pending_flows.pop(message.from_user.id, None)
     if db.get_credential(message.from_user.id) is None:
         await message.reply_text("🔑 **You have not authenticated me to upload to any account.**\n__Send /auth to authenticate.__", reply_parameters=ReplyParameters(message_id=message.id))
     else:

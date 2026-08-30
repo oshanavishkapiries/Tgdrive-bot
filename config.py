@@ -17,6 +17,7 @@ class Config:
     API_HASH = _require("API_HASH")
     GDRIVE_CLIENT_ID = _require("GDRIVE_CLIENT_ID")
     GDRIVE_CLIENT_SECRET = _require("GDRIVE_CLIENT_SECRET")
+    GDRIVE_REDIRECT_URI = _require("GDRIVE_REDIRECT_URI")
     DATABASE_PATH = os.environ.get("DATABASE_PATH", "data/bot.db")
 
 

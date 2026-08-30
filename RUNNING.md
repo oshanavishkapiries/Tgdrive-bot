@@ -81,7 +81,8 @@ pm2 monit                           # live CPU/memory view
 |---|---|
 | `RuntimeError: Missing required environment variable: X` | `.env` doesn't exist yet, or is missing that field — copy `.env.example` to `.env` and fill it in |
 | Bot doesn't reply on Telegram at all | Check `pm2 list` shows it `online`; check `BOT_TOKEN` is correct and not revoked |
-| `/auth` fails immediately with an error | `GDRIVE_CLIENT_ID`/`GDRIVE_CLIENT_SECRET` wrong, Drive API not enabled on the Google Cloud project, or the OAuth client isn't type "TVs and Limited Input devices" |
+| `/auth` fails immediately with an error | `GDRIVE_CLIENT_ID`/`GDRIVE_CLIENT_SECRET` wrong, Drive API not enabled on the Google Cloud project, the OAuth client isn't type "Web application", or `GDRIVE_REDIRECT_URI` doesn't exactly match an Authorized redirect URI on that OAuth client |
+| Pasting the code back does nothing / says invalid | The code is single-use and expires quickly — run /auth again and paste the fresh code promptly; also check the Cloudflare Worker is still deployed and reachable |
 | Uploads fail with `LimitExceeded` | Google Drive API daily/user rate limit hit on that Google account — wait 24h |
 
 ## 6. Removing the bot entirely

@@ -32,6 +32,7 @@ class Messages:
         "/auth - __Authenticate your Google Drive account__\n"
         "/revoke - __Revoke your authenticated Google Drive account__\n"
         "/setfolder - __Set or view a custom upload folder (`/setfolder {folder id/URL}`, or `/setfolder clear`)__\n"
-        "/copy - __Copy a Google Drive file or folder into your account (`/copy {file/folder id or URL}`)__\n\n"
+        "/copy - __Copy a Google Drive file or folder into your account (`/copy {file/folder id or URL}`)__\n"
+        "/list - __Browse your Google Drive files and folders (`/list` or `/list {folder id/URL}`)__\n\n"
         "__You can also just send me a direct download link, or a Telegram file/photo/video/audio, once you're authenticated with /auth.__"
     )

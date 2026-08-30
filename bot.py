@@ -20,6 +20,7 @@ BOT_COMMANDS = [
     BotCommand("revoke", "Revoke your authenticated Google Drive account"),
     BotCommand("setfolder", "Set or view a custom upload folder"),
     BotCommand("copy", "Copy a Google Drive file or folder into your account"),
+    BotCommand("list", "Browse your Google Drive files and folders"),
 ]
 
 

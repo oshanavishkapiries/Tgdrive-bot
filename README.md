@@ -9,6 +9,7 @@ This is a modernized fork of an older (2019-era) project: the Telegram library, 
 - Upload from a direct download link, with optional rename (`url | New Name.ext`)
 - Set a custom upload folder or Shared Drive (`/setfolder`)
 - Clone/copy Google Drive files or folders into your account (`/copy`)
+- Browse your Drive with interactive folder navigation (`/list`)
 
 ## Requirements
 - Python 3.10+
